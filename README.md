@@ -79,8 +79,8 @@ Measured on a standard modern workstation using `benchmarks/benchmark_throughput
 ### 1. Installation
 
 ```bash
-git clone https://github.com/shivesh4106-prog/zeromesh.git
-cd zeromesh
+git clone https://github.com/shivesh4106-prog/zeromesh-.git
+cd zeromesh-
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
