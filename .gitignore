@@ -1,0 +1,64 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+lib/
+lib64/
+.installed.cfg
+MANIFEST
+
+# === Virtual Environments ===
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# === Testing & Coverage ===
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# === Type Checking ===
+.mypy_cache/
+.pytype/
+.pyre/
+
+# === Linting / Formatting ===
+.ruff_cache/
+
+# === IDEs & Editors ===
+.idea/
+.vscode/
+*.swp
+*.swo
+*.kate-swp
+*~
+
+# === ZeroMesh Specific ===
+data/
+storage/chunks/
+storage/index.db
+*.chunk
+*.enc
+logs/
+*.log
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Benchmarks Output ===
+benchmarks/results/
