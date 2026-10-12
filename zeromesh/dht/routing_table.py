@@ -71,6 +71,10 @@ class RoutingTable:
         idx = self._bucket_index_for(peer.node_id)
         return self._buckets[idx].add_or_update(peer)
 
+    def add_peer(self, peer: PeerInfo) -> bool:
+        """Alias for add_or_update."""
+        return self.add_or_update(peer)
+
     def mark_seen(self, node_id: NodeID) -> None:
         """Promote a peer to MRS position after any successful contact."""
         if node_id == self.local_id:

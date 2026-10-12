@@ -75,6 +75,16 @@ class PeerConnection:
         self.is_closed = False
         self._send_lock = asyncio.Lock()  # serialize concurrent sends
 
+    @property
+    def remote_address(self) -> PeerAddress:
+        """Alias for address."""
+        return self.address
+
+    @property
+    def is_open(self) -> bool:
+        """True if the connection has not been closed."""
+        return not self.is_closed
+
     # ── Factory methods ───────────────────────────────────────────
 
     @classmethod

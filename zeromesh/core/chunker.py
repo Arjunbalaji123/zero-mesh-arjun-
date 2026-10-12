@@ -101,12 +101,15 @@ class FileChunker:
             raise ValueError("chunk_size must be a positive integer")
         self.chunk_size = chunk_size
 
-    def chunk_file(self, path: Path) -> tuple[FileManifest, list[bytes]]:
+    def chunk_file(
+        self, path: Path, filename: str | None = None
+    ) -> tuple[FileManifest, list[bytes]]:
         """
         Read a file from disk, split it into chunks, compute SHA-256 per chunk.
 
         Args:
             path: Path to the file to chunk.
+            filename: Optional custom filename to record in manifest (default path.name).
 
         Returns:
             (FileManifest, list_of_chunk_bytes) — the manifest and raw chunks.
@@ -134,7 +137,7 @@ class FileChunker:
         ]
 
         manifest = FileManifest(
-            filename=path.name,
+            filename=filename or path.name,
             total_size=total_size,
             chunk_size=self.chunk_size,
             chunks=chunk_metas,
