@@ -33,9 +33,20 @@ console = Console()
 
 @app.command()
 def start(
-    host: str = typer.Option("127.0.0.1", "--host", "-h", help="TCP listen host"),
+    host: str = typer.Option("127.0.0.1", "--host", "-h", help="TCP listen host (use 0.0.0.0 for LAN/Hotspot)"),
     port: int = typer.Option(7400, "--port", "-p", help="TCP listen port for P2P"),
     api_port: int = typer.Option(8000, "--api-port", help="HTTP port for REST API"),
+    advertise_host: str | None = typer.Option(
+        None,
+        "--advertise-host",
+        "-a",
+        help="Public, LAN, or Tailscale/VPN IP or hostname to announce to peers",
+    ),
+    advertise_port: int | None = typer.Option(
+        None,
+        "--advertise-port",
+        help="Port to announce to peers if different from listen port (e.g. port forwarding)",
+    ),
     data_dir: Path = typer.Option(Path("./data"), "--data-dir", "-d", help="Storage directory"),
     bootstrap: list[str] = typer.Option(
         [], "--bootstrap", "-b", help="Bootstrap peer addresses (host:port)"
@@ -45,10 +56,18 @@ def start(
     import uvicorn
 
     console.print(f"[bold cyan]ZeroMesh Node[/bold cyan] starting on [green]{host}:{port}[/green]...")
+    if advertise_host:
+        console.print(f"Advertising address: [cyan]{advertise_host}:{advertise_port or port}[/cyan]")
     console.print(f"Data directory: [yellow]{data_dir.resolve()}[/yellow]")
 
     async def _run() -> None:
-        node = ZeroMeshNode(host=host, port=port, data_dir=data_dir)
+        node = ZeroMeshNode(
+            host=host,
+            port=port,
+            advertise_host=advertise_host,
+            advertise_port=advertise_port,
+            data_dir=data_dir,
+        )
         await node.start()
 
         if bootstrap:

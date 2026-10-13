@@ -137,3 +137,33 @@ class TestZeroMeshNodeIntegration:
         finally:
             await seed.stop()
             await newbie.stop()
+
+    async def test_announced_port_and_host_in_routing(self, tmp_path: Path):
+        node1 = ZeroMeshNode(
+            host="127.0.0.1",
+            port=7510,
+            advertise_host="100.64.0.1",
+            advertise_port=7510,
+            data_dir=tmp_path / "n1",
+        )
+        node2 = ZeroMeshNode(
+            host="127.0.0.1",
+            port=7511,
+            data_dir=tmp_path / "n2",
+        )
+
+        await node1.start()
+        await node2.start()
+
+        try:
+            rtt = await node1.ping_peer("127.0.0.1", 7511)
+            assert rtt is not None
+            # Node 2 should have recorded node 1's announced host and port
+            assert node2.routing_table.total_peers == 1
+            peer1 = node2.routing_table.closest_peers(node1.local_id, count=1)[0]
+            assert peer1.host == "100.64.0.1"
+            assert peer1.port == 7510
+        finally:
+            await node1.stop()
+            await node2.stop()
+

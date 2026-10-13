@@ -45,15 +45,20 @@ class ZeroMeshNode:
         self,
         host: str = "127.0.0.1",
         port: int = 7400,
+        advertise_host: str | None = None,
+        advertise_port: int | None = None,
         data_dir: Path | str = "./data",
         key: bytes | None = None,
         node_id: NodeID | None = None,
     ) -> None:
         self.host = host
         self.port = port
+        self.advertise_host = advertise_host
+        self.advertise_port = advertise_port or port
         self.data_dir = Path(data_dir)
         self.key = key or generate_key()
-        self.local_id = node_id or NodeID.from_address(host, port)
+        canonical_host = advertise_host or (host if host != "0.0.0.0" else "127.0.0.1")
+        self.local_id = node_id or NodeID.from_address(canonical_host, self.advertise_port)
 
         self.routing_table = RoutingTable(self.local_id)
         self.scorer = PeerScorer()
@@ -107,12 +112,14 @@ class ZeroMeshNode:
         """Route received message to appropriate handler."""
         if msg.type == MessageType.PING:
             sender_id = msg.payload.get("node_id")
+            announced_port = msg.payload.get("port")
+            announced_host = msg.payload.get("host")
             if sender_id and conn.remote_address:
                 try:
                     p = PeerInfo(
                         node_id=NodeID.from_hex(sender_id),
-                        host=conn.remote_address.host,
-                        port=conn.remote_address.port,
+                        host=announced_host or conn.remote_address.host,
+                        port=announced_port or conn.remote_address.port,
                     )
                     self.routing_table.add_peer(p)
                     self.scorer.record_success(sender_id)
@@ -130,6 +137,8 @@ class ZeroMeshNode:
         elif msg.type == MessageType.FIND_NODE:
             target_hex = msg.payload.get("target_id")
             sender_hex = msg.payload.get("sender_id")
+            announced_port = msg.payload.get("port")
+            announced_host = msg.payload.get("host")
             if target_hex:
                 target = NodeID.from_hex(target_hex)
                 closest = self.routing_table.closest_peers(target, count=20)
@@ -141,8 +150,8 @@ class ZeroMeshNode:
                 try:
                     p = PeerInfo(
                         node_id=NodeID.from_hex(sender_hex),
-                        host=conn.remote_address.host,
-                        port=conn.remote_address.port,
+                        host=announced_host or conn.remote_address.host,
+                        port=announced_port or conn.remote_address.port,
                     )
                     self.routing_table.add_peer(p)
                 except Exception:
@@ -189,7 +198,13 @@ class ZeroMeshNode:
                 timeout=3.0,
             )
             try:
-                await conn.send(Message.ping(self.local_id.hex))
+                await conn.send(
+                    Message.ping(
+                        self.local_id.hex,
+                        port=self.advertise_port,
+                        host=self.advertise_host,
+                    )
+                )
                 reply = await asyncio.wait_for(conn.receive(), timeout=3.0)
                 if reply.type == MessageType.PONG:
                     rtt_ms = (time.perf_counter() - start_t) * 1000.0
@@ -217,7 +232,14 @@ class ZeroMeshNode:
                 timeout=4.0,
             )
             try:
-                await conn.send(Message.find_node(self.local_id.hex, target.hex))
+                await conn.send(
+                    Message.find_node(
+                        self.local_id.hex,
+                        target.hex,
+                        port=self.advertise_port,
+                        host=self.advertise_host,
+                    )
+                )
                 reply = await asyncio.wait_for(conn.receive(), timeout=4.0)
                 if reply.type == MessageType.FOUND_NODES:
                     raw_nodes = reply.payload.get("nodes", [])

@@ -33,6 +33,21 @@ class TestMessageConstructors:
         assert m.type == MessageType.PING
         assert m.payload["node_id"] == "node-abc"
 
+    def test_ping_with_port_and_host(self):
+        m = Message.ping("node-abc", port=7400, host="10.0.0.1")
+        assert m.type == MessageType.PING
+        assert m.payload["node_id"] == "node-abc"
+        assert m.payload["port"] == 7400
+        assert m.payload["host"] == "10.0.0.1"
+
+    def test_find_node_with_port_and_host(self):
+        m = Message.find_node("sender", "target", port=7400, host="10.0.0.1")
+        assert m.type == MessageType.FIND_NODE
+        assert m.payload["sender_id"] == "sender"
+        assert m.payload["target_id"] == "target"
+        assert m.payload["port"] == 7400
+        assert m.payload["host"] == "10.0.0.1"
+
     def test_pong(self):
         m = Message.pong("node-xyz", rtt_ms=12.5)
         assert m.type == MessageType.PONG

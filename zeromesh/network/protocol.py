@@ -84,16 +84,37 @@ class Message:
     # ── Convenience constructors ─────────────────────────────────
 
     @classmethod
-    def ping(cls, node_id: str) -> Message:
-        return cls(MessageType.PING, {"node_id": node_id})
+    def ping(
+        cls,
+        node_id: str,
+        port: int | None = None,
+        host: str | None = None,
+    ) -> Message:
+        payload: dict[str, Any] = {"node_id": node_id}
+        if port is not None:
+            payload["port"] = port
+        if host is not None:
+            payload["host"] = host
+        return cls(MessageType.PING, payload)
 
     @classmethod
     def pong(cls, node_id: str, rtt_ms: float = 0.0) -> Message:
         return cls(MessageType.PONG, {"node_id": node_id, "rtt_ms": rtt_ms})
 
     @classmethod
-    def find_node(cls, sender_id: str, target_id: str) -> Message:
-        return cls(MessageType.FIND_NODE, {"sender_id": sender_id, "target_id": target_id})
+    def find_node(
+        cls,
+        sender_id: str,
+        target_id: str,
+        port: int | None = None,
+        host: str | None = None,
+    ) -> Message:
+        payload: dict[str, Any] = {"sender_id": sender_id, "target_id": target_id}
+        if port is not None:
+            payload["port"] = port
+        if host is not None:
+            payload["host"] = host
+        return cls(MessageType.FIND_NODE, payload)
 
     @classmethod
     def found_nodes(cls, nodes: list[tuple[str, str, int]]) -> Message:

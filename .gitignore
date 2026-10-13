@@ -49,12 +49,15 @@ htmlcov/
 
 # === ZeroMesh Specific ===
 data/
+data_*/
 storage/chunks/
 storage/index.db
 *.chunk
 *.enc
 logs/
 *.log
+downloaded_file*.txt
+test_file*.txt
 
 # === OS ===
 .DS_Store
