@@ -35,6 +35,7 @@ console = Console()
 def start(
     host: str = typer.Option("127.0.0.1", "--host", "-h", help="TCP listen host (use 0.0.0.0 for LAN/Hotspot)"),
     port: int = typer.Option(7400, "--port", "-p", help="TCP listen port for P2P"),
+    api_host: str = typer.Option("0.0.0.0", "--api-host", help="HTTP listen host for Web API/Prometheus"),
     api_port: int = typer.Option(8000, "--api-port", help="HTTP port for REST API"),
     advertise_host: str | None = typer.Option(
         None,
@@ -78,12 +79,16 @@ def start(
             await node.bootstrap(seeds)
 
         api_app = create_app(node)
-        config = uvicorn.Config(app=api_app, host=host, port=api_port, log_level="info")
+        config = uvicorn.Config(app=api_app, host=api_host, port=api_port, log_level="info")
         server = uvicorn.Server(config)
 
         try:
-            console.print(f"[bold green]✓[/bold green] REST API available at [cyan]http://{host}:{api_port}[/cyan]")
-            console.print(f"[bold green]✓[/bold green] Swagger UI: [cyan]http://{host}:{api_port}/docs[/cyan]")
+            display_host = "127.0.0.1" if api_host in ("0.0.0.0", "") else api_host
+            console.print(f"[bold green]✓[/bold green] Web Dashboard: [cyan]http://{display_host}:{api_port}[/cyan]")
+            console.print(f"[bold green]✓[/bold green] REST API Docs: [cyan]http://{display_host}:{api_port}/docs[/cyan]")
+            console.print(f"[bold green]✓[/bold green] Prometheus:    [cyan]http://{display_host}:{api_port}/metrics[/cyan]")
+            if api_host == "0.0.0.0":
+                console.print(f"[dim]  (Also accessible to network peers on http://<your-ip>:{api_port}/)[/dim]")
             await server.serve()
         finally:
             await node.stop()
