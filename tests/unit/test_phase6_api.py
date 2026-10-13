@@ -104,3 +104,11 @@ class TestZeroMeshAPI:
             body = resp.text
             assert "zeromesh_uploads_total" in body
             assert "zeromesh_active_peers" in body
+
+    async def test_dashboard_endpoint(self, app):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get("/")
+            assert resp.status_code == 200
+            assert "ZeroMesh" in resp.text
+            assert "DECENTRALIZED ENCRYPTED STORAGE" in resp.text
+

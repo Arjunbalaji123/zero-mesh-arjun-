@@ -22,6 +22,8 @@ from typing import Annotated
 
 from fastapi import FastAPI, File, HTTPException, Query, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from zeromesh.monitoring.metrics import METRICS
@@ -197,5 +199,17 @@ def create_app(node: "ZeroMeshNode") -> FastAPI:  # type: ignore[name-defined]  
             content=generate_latest(),
             media_type=CONTENT_TYPE_LATEST,
         )
+
+    # ── Static Web Dashboard ──────────────────────────────────────
+
+    static_dir = Path(__file__).parent / "static"
+    if static_dir.exists():
+        app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+        @app.get("/", response_class=FileResponse, include_in_schema=False)
+        @app.get("/dashboard", response_class=FileResponse, include_in_schema=False)
+        async def dashboard():
+            """Serve the ZeroMesh Web Console dashboard."""
+            return FileResponse(static_dir / "index.html")
 
     return app

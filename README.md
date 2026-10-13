@@ -3,7 +3,7 @@
 > **Decentralized Peer-to-Peer Encrypted File System**  
 > Built from scratch in Python 3.12+ · AES-256-GCM · Kademlia DHT · SHA-256 · AsyncIO · FastAPI · Prometheus
 
-[![Tests](https://img.shields.io/badge/tests-124%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-125%20passed-brightgreen.svg)]()
 [![Encryption](https://img.shields.io/badge/crypto-AES--256--GCM-blue.svg)]()
 [![DHT](https://img.shields.io/badge/DHT-Kademlia%20(256--bit)-purple.svg)]()
 [![Throughput](https://img.shields.io/badge/throughput-1.5%20GB%2Fs-orange.svg)]()
@@ -120,10 +120,11 @@ zeromesh status
 
 ---
 
-## 🌐 REST API Endpoints
+## 🌐 Web Console & REST API
 
-FastAPI runs on `http://127.0.0.1:8000` (interactive documentation at `/docs`):
+ZeroMesh includes a **Cyberpunk Glassmorphic Web Dashboard** served directly at `http://127.0.0.1:8000/` (interactive API documentation at `/docs`):
 
+- **Web Dashboard**: `http://127.0.0.1:8000/` — Drag-and-drop file upload, instant P2P downloads, real-time DHT peer routing table, live telemetry metrics, and retro-cyber event console.
 - `POST /api/files/upload`: Multipart upload with automatic chunking and distribution
 - `GET /api/files/{manifest_id}`: Parallel download, verification, and streaming response
 - `GET /api/files`: List all files registered on the node
