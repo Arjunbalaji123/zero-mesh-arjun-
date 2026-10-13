@@ -26,15 +26,15 @@ import asyncio
 import logging
 from pathlib import Path
 
-from zeromesh.core.chunker import FileAssembler, FileChunker, FileManifest
-from zeromesh.crypto.engine import decrypt_chunk, encrypt_chunk, EncryptedChunk
+from zeromesh.core.chunker import FileAssembler, FileChunker
+from zeromesh.crypto.engine import EncryptedChunk, decrypt_chunk, encrypt_chunk
 from zeromesh.dht.kbucket import PeerInfo
-from zeromesh.dht.lookup import KademliaLookup, FindNodeRPC
+from zeromesh.dht.lookup import FindNodeRPC, KademliaLookup
 from zeromesh.dht.node_id import NodeID
 from zeromesh.dht.routing_table import RoutingTable
 from zeromesh.network.connection import PeerAddress, PeerConnection
-from zeromesh.network.protocol import Message, MessageType
 from zeromesh.network.peer_scorer import PeerScorer
+from zeromesh.network.protocol import Message, MessageType
 from zeromesh.storage.chunk_store import LocalChunkStore
 from zeromesh.storage.manifest_registry import ManifestRegistry
 
@@ -95,13 +95,9 @@ class FileManager:
             enc_chunks.append(enc)
 
         # 3. Publish to DHT peers in parallel (fire-and-forget replication)
-        peers = self._scorer.rank_peers(
-            [p.node_id.hex for p in self._routing.all_peers()]
-        )
-        target_peers = [
-            self._routing.all_peers()[i]
-            for i in range(min(REPLICATION_FACTOR, len(self._routing.all_peers())))
-        ]
+        all_peers_map = {p.node_id.hex: p for p in self._routing.all_peers()}
+        ranked_ids = self._scorer.rank_peers(list(all_peers_map.keys()))
+        target_peers = [all_peers_map[nid] for nid in ranked_ids[:REPLICATION_FACTOR]]
         await asyncio.gather(
             *[self._publish_chunk(enc, target_peers) for enc in enc_chunks],
             return_exceptions=True,
@@ -170,7 +166,7 @@ class FileManager:
         )
 
         for i, result in enumerate(results):
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 raise RuntimeError(
                     f"Failed to retrieve chunk {i}: {result}"
                 ) from result

@@ -74,7 +74,7 @@ class ZeroMeshNode:
             handler=self.handle_connection,
         )
 
-        self._refresh_task: asyncio.Task | None = None
+        self._refresh_task: asyncio.Task[None] | None = None
         self._is_running = False
 
     @property
@@ -90,7 +90,7 @@ class ZeroMeshNode:
             while conn.is_open:
                 try:
                     msg = await conn.receive(timeout=15.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     break
                 except EOFError:
                     break

@@ -9,13 +9,12 @@ Provides:
 
 import hashlib
 import hmac
-import os
 import secrets
 from dataclasses import dataclass
 
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives import hashes
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 

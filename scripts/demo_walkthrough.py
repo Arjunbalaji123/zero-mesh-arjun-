@@ -12,7 +12,6 @@ Demonstrates:
 """
 
 import asyncio
-import os
 import shutil
 import tempfile
 import time
@@ -21,7 +20,6 @@ from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.syntax import Syntax
 
 from zeromesh.crypto.engine import generate_key
 from zeromesh.dht.kbucket import PeerInfo

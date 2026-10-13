@@ -32,10 +32,9 @@ recently seen peer from the cache takes its slot.
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from zeromesh.dht.node_id import NodeID
-
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 

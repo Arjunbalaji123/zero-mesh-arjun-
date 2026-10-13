@@ -26,7 +26,6 @@ from pathlib import Path
 
 import aiosqlite
 
-
 # ─── Schema ───────────────────────────────────────────────────────────────────
 
 _DDL = """
@@ -204,7 +203,9 @@ class LocalChunkStore:
         self._assert_open()
         async with self._db.execute("SELECT SUM(size_bytes) FROM chunks") as cur:  # type: ignore[union-attr]
             row = await cur.fetchone()
-        return row[0] or 0
+        if row is None or row[0] is None:
+            return 0
+        return int(row[0])
 
     # ── Helpers ───────────────────────────────────────────────────
 

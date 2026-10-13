@@ -84,19 +84,19 @@ class Message:
     # ── Convenience constructors ─────────────────────────────────
 
     @classmethod
-    def ping(cls, node_id: str) -> "Message":
+    def ping(cls, node_id: str) -> Message:
         return cls(MessageType.PING, {"node_id": node_id})
 
     @classmethod
-    def pong(cls, node_id: str, rtt_ms: float = 0.0) -> "Message":
+    def pong(cls, node_id: str, rtt_ms: float = 0.0) -> Message:
         return cls(MessageType.PONG, {"node_id": node_id, "rtt_ms": rtt_ms})
 
     @classmethod
-    def find_node(cls, sender_id: str, target_id: str) -> "Message":
+    def find_node(cls, sender_id: str, target_id: str) -> Message:
         return cls(MessageType.FIND_NODE, {"sender_id": sender_id, "target_id": target_id})
 
     @classmethod
-    def found_nodes(cls, nodes: list[tuple[str, str, int]]) -> "Message":
+    def found_nodes(cls, nodes: list[tuple[str, str, int]]) -> Message:
         """nodes: list of (node_id, host, port)"""
         return cls(MessageType.FOUND_NODES, {"nodes": nodes})
 
@@ -106,33 +106,33 @@ class Message:
         content_id: str,
         nonce: bytes,
         ciphertext: bytes,
-    ) -> "Message":
+    ) -> Message:
         return cls(
             MessageType.STORE_CHUNK,
             {"content_id": content_id, "nonce": nonce, "ciphertext": ciphertext},
         )
 
     @classmethod
-    def store_ack(cls, content_id: str) -> "Message":
+    def store_ack(cls, content_id: str) -> Message:
         return cls(MessageType.STORE_ACK, {"content_id": content_id})
 
     @classmethod
-    def get_chunk(cls, content_id: str) -> "Message":
+    def get_chunk(cls, content_id: str) -> Message:
         return cls(MessageType.GET_CHUNK, {"content_id": content_id})
 
     @classmethod
-    def chunk_data(cls, content_id: str, nonce: bytes, ciphertext: bytes) -> "Message":
+    def chunk_data(cls, content_id: str, nonce: bytes, ciphertext: bytes) -> Message:
         return cls(
             MessageType.CHUNK_DATA,
             {"content_id": content_id, "nonce": nonce, "ciphertext": ciphertext},
         )
 
     @classmethod
-    def error(cls, code: int, reason: str) -> "Message":
+    def error(cls, code: int, reason: str) -> Message:
         return cls(MessageType.ERROR, {"code": code, "reason": reason})
 
     @classmethod
-    def goodbye(cls) -> "Message":
+    def goodbye(cls) -> Message:
         return cls(MessageType.GOODBYE, {})
 
     def __repr__(self) -> str:
@@ -157,7 +157,7 @@ def encode_message(msg: Message) -> bytes:
     Raises:
         ValueError: if the encoded frame exceeds MAX_FRAME_BYTES.
     """
-    payload_bytes = msgpack.packb(msg.payload, use_bin_type=True)
+    payload_bytes: bytes = bytes(msgpack.packb(msg.payload, use_bin_type=True))
     type_byte = msg.type.value
 
     # body = type_byte + payload_bytes

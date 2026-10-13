@@ -54,7 +54,7 @@ class NodeServer:
     backlog: int = 100
 
     _server: asyncio.Server | None = field(default=None, init=False, repr=False)
-    _tasks: set[asyncio.Task] = field(default_factory=set, init=False, repr=False)
+    _tasks: set[asyncio.Task[None]] = field(default_factory=set, init=False, repr=False)
 
     @property
     def is_running(self) -> bool:

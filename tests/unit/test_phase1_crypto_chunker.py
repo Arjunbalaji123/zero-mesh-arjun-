@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from zeromesh.core.chunker import FileAssembler, FileChunker
 from zeromesh.crypto.engine import (
     KEY_SIZE_BYTES,
     decrypt_chunk,
@@ -16,8 +17,6 @@ from zeromesh.crypto.engine import (
     sha256_hash,
     verify_hash,
 )
-from zeromesh.core.chunker import FileAssembler, FileChunker, FileManifest
-
 
 # ─── Crypto Tests ─────────────────────────────────────────────────────────────
 

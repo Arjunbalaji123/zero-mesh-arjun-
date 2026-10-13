@@ -15,12 +15,10 @@ Endpoints:
 
 from __future__ import annotations
 
-import io
 import tempfile
 from pathlib import Path
-from typing import Annotated
 
-from fastapi import FastAPI, File, HTTPException, Query, Response, UploadFile
+from fastapi import FastAPI, File, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -28,10 +26,9 @@ from pydantic import BaseModel
 
 from zeromesh.monitoring.metrics import METRICS
 
-
 # ─── App factory ──────────────────────────────────────────────────────────────
 
-def create_app(node: "ZeroMeshNode") -> FastAPI:  # type: ignore[name-defined]  # noqa: F821
+def create_app(node: ZeroMeshNode) -> FastAPI:  # type: ignore[name-defined]  # noqa: F821
     """
     Build the FastAPI application bound to a live node instance.
 
@@ -88,7 +85,7 @@ def create_app(node: "ZeroMeshNode") -> FastAPI:  # type: ignore[name-defined]  
     # ── File endpoints ────────────────────────────────────────────
 
     @app.post("/api/files/upload", response_model=UploadResponse, tags=["files"])
-    async def upload_file(file: UploadFile = File(...)):
+    async def upload_file(file: UploadFile = File(...)) -> UploadResponse:
         """
         Upload a file to ZeroMesh.
         The file is chunked, encrypted with the node's key, and distributed.
@@ -118,7 +115,7 @@ def create_app(node: "ZeroMeshNode") -> FastAPI:  # type: ignore[name-defined]  
             tmp_path.unlink(missing_ok=True)
 
     @app.get("/api/files/{manifest_id}", tags=["files"])
-    async def download_file(manifest_id: str):
+    async def download_file(manifest_id: str) -> Response:
         """Download a file by manifest_id. Returns the raw decrypted bytes."""
         METRICS.downloads_total.inc()
         manifest = await node.manifest_registry.get(manifest_id)
@@ -143,7 +140,7 @@ def create_app(node: "ZeroMeshNode") -> FastAPI:  # type: ignore[name-defined]  
             out_path.unlink(missing_ok=True)
 
     @app.get("/api/files", response_model=list[FileEntry], tags=["files"])
-    async def list_files():
+    async def list_files() -> list[FileEntry]:
         """List all files uploaded through this node."""
         entries = await node.manifest_registry.list_all()
         return [
@@ -152,7 +149,7 @@ def create_app(node: "ZeroMeshNode") -> FastAPI:  # type: ignore[name-defined]  
         ]
 
     @app.delete("/api/files/{manifest_id}", tags=["files"])
-    async def delete_file(manifest_id: str):
+    async def delete_file(manifest_id: str) -> dict[str, str]:
         """Remove a manifest (does not delete chunks from the network)."""
         deleted = await node.manifest_registry.delete(manifest_id)
         if not deleted:
@@ -162,7 +159,7 @@ def create_app(node: "ZeroMeshNode") -> FastAPI:  # type: ignore[name-defined]  
     # ── Peer endpoints ────────────────────────────────────────────
 
     @app.get("/api/peers", response_model=list[PeerEntry], tags=["peers"])
-    async def list_peers():
+    async def list_peers() -> list[PeerEntry]:
         """List all known peers and their reliability scores."""
         peers = node.routing_table.all_peers()
         return [
@@ -178,7 +175,7 @@ def create_app(node: "ZeroMeshNode") -> FastAPI:  # type: ignore[name-defined]  
     # ── Health endpoint ───────────────────────────────────────────
 
     @app.get("/api/health", response_model=HealthResponse, tags=["node"])
-    async def health():
+    async def health() -> HealthResponse:
         """Node health and storage statistics."""
         return HealthResponse(
             node_id=node.local_id.hex,
@@ -192,9 +189,9 @@ def create_app(node: "ZeroMeshNode") -> FastAPI:  # type: ignore[name-defined]  
     # ── Prometheus metrics ────────────────────────────────────────
 
     @app.get("/metrics", tags=["monitoring"], include_in_schema=False)
-    async def prometheus_metrics():
+    async def prometheus_metrics() -> Response:
         """Prometheus-compatible metrics endpoint."""
-        from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+        from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
         return Response(
             content=generate_latest(),
             media_type=CONTENT_TYPE_LATEST,
@@ -208,7 +205,7 @@ def create_app(node: "ZeroMeshNode") -> FastAPI:  # type: ignore[name-defined]  
 
         @app.get("/", response_class=FileResponse, include_in_schema=False)
         @app.get("/dashboard", response_class=FileResponse, include_in_schema=False)
-        async def dashboard():
+        async def dashboard() -> FileResponse:
             """Serve the ZeroMesh Web Console dashboard."""
             return FileResponse(static_dir / "index.html")
 

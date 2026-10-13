@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from zeromesh.network.protocol import (
     HEADER_SIZE,
@@ -25,7 +25,6 @@ from zeromesh.network.protocol import (
     decode_header,
     encode_message,
 )
-
 
 # ─── Peer Identity ────────────────────────────────────────────────────────────
 
@@ -92,7 +91,7 @@ class PeerConnection:
         cls,
         address: PeerAddress,
         timeout: float = 5.0,
-    ) -> "PeerConnection":
+    ) -> PeerConnection:
         """
         Open an outbound TCP connection to ``address``.
 
@@ -116,7 +115,7 @@ class PeerConnection:
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
         address: PeerAddress,
-    ) -> "PeerConnection":
+    ) -> PeerConnection:
         """Wrap already-accepted server streams into a PeerConnection."""
         return cls(reader, writer, address)
 

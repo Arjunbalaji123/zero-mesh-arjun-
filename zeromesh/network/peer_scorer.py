@@ -21,7 +21,6 @@ import math
 import time
 from dataclasses import dataclass, field
 
-
 # ─── Constants ────────────────────────────────────────────────────────────────
 
 RTT_IDEAL_MS     = 20.0    # Sub-20 ms → max RTT score
@@ -190,7 +189,7 @@ class PeerScorer:
         A peer last seen 1 hour ago scores 0.5; 2 hours ago → 0.25.
         """
         age_seconds = time.time() - stats.last_seen
-        return 0.5 ** (age_seconds / DECAY_HALF_LIFE)
+        return float(0.5 ** (age_seconds / DECAY_HALF_LIFE))
 
     @staticmethod
     def _streak_score(stats: PeerStats) -> float:

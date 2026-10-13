@@ -16,12 +16,12 @@ import os
 import tempfile
 import time
 from pathlib import Path
+
 from rich.console import Console
 from rich.table import Table
 
 from zeromesh.core.chunker import FileAssembler, FileChunker
 from zeromesh.crypto.engine import decrypt_chunk, encrypt_chunk, generate_key, sha256_hash
-from zeromesh.node import ZeroMeshNode
 from zeromesh.storage.chunk_store import LocalChunkStore
 
 console = Console()

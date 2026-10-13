@@ -9,15 +9,12 @@ Unit tests — Phase 5: ZeroMeshNode Integration
 
 from __future__ import annotations
 
-import asyncio
 import os
 from pathlib import Path
 
 import pytest
 
-from zeromesh.crypto.engine import generate_key
 from zeromesh.dht.kbucket import PeerInfo
-from zeromesh.dht.node_id import NodeID
 from zeromesh.network.connection import PeerAddress, PeerConnection
 from zeromesh.network.protocol import Message, MessageType
 from zeromesh.node import ZeroMeshNode

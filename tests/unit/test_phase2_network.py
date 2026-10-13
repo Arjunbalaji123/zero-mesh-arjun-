@@ -23,7 +23,6 @@ from zeromesh.network.protocol import (
 )
 from zeromesh.network.server import NodeServer
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # Protocol / Framing Tests
 # ══════════════════════════════════════════════════════════════════════════════
@@ -379,8 +378,8 @@ class TestPeerScorer:
 
     def test_streak_score_formula(self):
         """Verify exponential decay: exp(-0.5 * k) matches implementation."""
-        from zeromesh.network.peer_scorer import PeerScorer as PS
+        from zeromesh.network.peer_scorer import PeerScorer
         stats = PeerStats(node_id="t")
         stats.consecutive_failures = 4
-        score = PS._streak_score(stats)
+        score = PeerScorer._streak_score(stats)
         assert score == pytest.approx(math.exp(-0.5 * 4))

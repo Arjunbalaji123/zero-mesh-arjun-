@@ -9,13 +9,11 @@ from __future__ import annotations
 
 import json
 import time
-from dataclasses import asdict
 from pathlib import Path
 
 import aiosqlite
 
 from zeromesh.core.chunker import ChunkMeta, FileManifest
-
 
 _DDL = """
 CREATE TABLE IF NOT EXISTS manifests (

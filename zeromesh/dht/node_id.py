@@ -43,7 +43,6 @@ from __future__ import annotations
 import hashlib
 import secrets
 
-
 # ─── Constants ────────────────────────────────────────────────────────────────
 
 ID_BITS  = 256          # 256-bit key space (SHA-256 output)
@@ -78,23 +77,23 @@ class NodeID:
     # ── Factories ─────────────────────────────────────────────────
 
     @classmethod
-    def from_address(cls, host: str, port: int) -> "NodeID":
+    def from_address(cls, host: str, port: int) -> NodeID:
         """Deterministic ID from a node's network address."""
         canonical = f"{host}:{port}".encode()
         return cls(hashlib.sha256(canonical).digest())
 
     @classmethod
-    def from_hex(cls, hex_str: str) -> "NodeID":
+    def from_hex(cls, hex_str: str) -> NodeID:
         """Parse a 64-character hex string."""
         raw = bytes.fromhex(hex_str)
         return cls(raw)
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> "NodeID":
+    def from_bytes(cls, data: bytes) -> NodeID:
         return cls(data)
 
     @classmethod
-    def from_content_id(cls, content_id_hex: str) -> "NodeID":
+    def from_content_id(cls, content_id_hex: str) -> NodeID:
         """
         Map a chunk's SHA-256 content ID into the DHT key space.
         Since content IDs are already SHA-256 hex digests, this is a direct
@@ -103,7 +102,7 @@ class NodeID:
         return cls.from_hex(content_id_hex)
 
     @classmethod
-    def random(cls) -> "NodeID":
+    def random(cls) -> NodeID:
         """Generate a random 256-bit ID (useful for testing / bootstrap)."""
         return cls(secrets.token_bytes(ID_BYTES))
 
@@ -121,7 +120,7 @@ class NodeID:
 
     # ── XOR Distance ──────────────────────────────────────────────
 
-    def distance(self, other: "NodeID") -> "XORDistance":
+    def distance(self, other: NodeID) -> XORDistance:
         """
         Compute the XOR distance between this node and ``other``.
 
@@ -131,7 +130,7 @@ class NodeID:
         xor_int = self.as_int ^ other.as_int
         return XORDistance(xor_int)
 
-    def bucket_index(self, other: "NodeID") -> int:
+    def bucket_index(self, other: NodeID) -> int:
         """
         Which k-bucket index should ``other`` be placed in,
         from *this* node's perspective?
@@ -148,7 +147,7 @@ class NodeID:
             return self._raw == other._raw
         return NotImplemented
 
-    def __lt__(self, other: "NodeID") -> bool:
+    def __lt__(self, other: NodeID) -> bool:
         return self._raw < other._raw
 
     def __hash__(self) -> int:
@@ -196,7 +195,7 @@ class XORDistance:
             return -1  # same node
         return self._value.bit_length() - 1
 
-    def __lt__(self, other: "XORDistance") -> bool:
+    def __lt__(self, other: XORDistance) -> bool:
         return self._value < other._value
 
     def __eq__(self, other: object) -> bool:

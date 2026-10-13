@@ -6,7 +6,6 @@ Unit tests — Phase 7: Prometheus Metrics & Monitoring
 
 from __future__ import annotations
 
-import pytest
 from prometheus_client import generate_latest
 
 from zeromesh.monitoring.metrics import METRICS, ZeroMeshMetrics

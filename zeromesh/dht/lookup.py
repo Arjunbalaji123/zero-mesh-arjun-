@@ -46,7 +46,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Awaitable, Callable
 from typing import Protocol
 
 from zeromesh.dht.kbucket import K, PeerInfo
@@ -182,7 +181,7 @@ class KademliaLookup:
             )
             logger.debug("FIND_NODE %s → %d peers", peer.node_id, len(peers))
             return peers
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.debug("FIND_NODE timeout: %s", peer)
             return []
         except Exception as exc:

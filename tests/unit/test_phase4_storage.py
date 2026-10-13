@@ -18,9 +18,8 @@ from zeromesh.dht.node_id import NodeID
 from zeromesh.dht.routing_table import RoutingTable
 from zeromesh.network.peer_scorer import PeerScorer
 from zeromesh.storage.chunk_store import LocalChunkStore
-from zeromesh.storage.manifest_registry import ManifestRegistry
 from zeromesh.storage.file_manager import FileManager
-
+from zeromesh.storage.manifest_registry import ManifestRegistry
 
 # ─── LocalChunkStore Tests ───────────────────────────────────────────────────
 

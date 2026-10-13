@@ -8,9 +8,9 @@ and reassembles them after retrieval.
 from __future__ import annotations
 
 import math
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterator
 
 from zeromesh.crypto.engine import sha256_hash
 

@@ -8,15 +8,12 @@ Unit tests — Phase 3: Kademlia DHT
 
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from zeromesh.dht.kbucket import KBucket, PeerInfo
 from zeromesh.dht.lookup import KademliaLookup
-from zeromesh.dht.node_id import ID_BYTES, NodeID, XORDistance
+from zeromesh.dht.node_id import ID_BYTES, NodeID
 from zeromesh.dht.routing_table import RoutingTable
-
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
