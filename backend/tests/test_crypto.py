@@ -1,10 +1,10 @@
 import pytest
 from app.crypto.aes import (
+    b64_to_key,
+    decrypt_chunk,
+    encrypt_chunk,
     generate_key,
     key_to_b64,
-    b64_to_key,
-    encrypt_chunk,
-    decrypt_chunk,
 )
 from cryptography.exceptions import InvalidTag
 

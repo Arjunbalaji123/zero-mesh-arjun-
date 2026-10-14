@@ -11,7 +11,6 @@ Provides cryptographic key management with full key separation:
 
 from __future__ import annotations
 
-import os
 import secrets
 from dataclasses import dataclass
 from typing import Any
@@ -33,7 +32,7 @@ ARGON2_PARALLELISM = 4      # 4 lanes
 class WrappedKey:
     """
     An encrypted Data Encryption Key (DEK) wrapped by a Key Encryption Key (KEK).
-    
+
     Attributes:
         salt: Salt used for passphrase KDF (16 bytes).
         nonce: Nonce used for wrapping (12 bytes).
@@ -81,7 +80,7 @@ class KeyManager:
     ) -> tuple[bytes, bytes]:
         """
         Derive a 256-bit Key Encryption Key (KEK) from a user passphrase using Argon2id.
-        
+
         Returns:
             (kek_bytes, salt_bytes)
         """
@@ -141,7 +140,7 @@ class KeyManager:
     def unwrap_key(cls, wrapped: WrappedKey, passphrase: str) -> bytes:
         """
         Unwrap a file's Data Encryption Key using the passphrase.
-        
+
         Raises:
             cryptography.exceptions.InvalidTag: if passphrase is wrong or data tampered.
         """

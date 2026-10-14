@@ -1,5 +1,5 @@
 import time
-from typing import List, Optional
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -26,8 +26,8 @@ class FileMetadata(BaseModel):
     chunk_size: int
     file_hash: str
     created_at: float = Field(default_factory=time.time)
-    encryption_key_b64: Optional[str] = None
-    chunks: List[ChunkMetadata] = []
+    encryption_key_b64: str | None = None
+    chunks: list[ChunkMetadata] = []
 
 
 class PeerInfo(BaseModel):
@@ -56,4 +56,4 @@ class MetricRecord(BaseModel):
     metric_name: str
     value: float
     timestamp: float = Field(default_factory=time.time)
-    details: Optional[str] = None
+    details: str | None = None

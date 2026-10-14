@@ -1,6 +1,6 @@
 import base64
 import os
-from typing import Tuple
+
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 
@@ -19,7 +19,7 @@ def b64_to_key(key_b64: str) -> bytes:
     return base64.b64decode(key_b64.encode("utf-8"))
 
 
-def encrypt_chunk(chunk_bytes: bytes, key: bytes) -> Tuple[bytes, bytes]:
+def encrypt_chunk(chunk_bytes: bytes, key: bytes) -> tuple[bytes, bytes]:
     """
     Encrypts a chunk using AES-256-GCM with a unique 96-bit (12 bytes) nonce.
     Returns (nonce, ciphertext_with_tag).

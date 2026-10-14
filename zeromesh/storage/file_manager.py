@@ -25,6 +25,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
+from typing import Any
 
 from zeromesh.core.chunker import FileAssembler, FileChunker
 from zeromesh.crypto.engine import EncryptedChunk, decrypt_chunk, encrypt_chunk

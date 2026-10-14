@@ -18,17 +18,14 @@ import asyncio
 import csv
 import os
 import random
-import secrets
-import tempfile
 import time
 from pathlib import Path
+from typing import Any
 
 from rich.console import Console
 from rich.table import Table
 
-from zeromesh.core.chunker import FileAssembler, FileChunker
 from zeromesh.crypto.engine import (
-    compute_ciphertext_id,
     decrypt_chunk,
     encrypt_chunk,
     generate_key,
@@ -39,7 +36,7 @@ from zeromesh.dht.kbucket import PeerInfo
 from zeromesh.dht.lookup import KademliaLookup
 from zeromesh.dht.node_id import NodeID
 from zeromesh.dht.routing_table import RoutingTable
-from zeromesh.network.peer_scorer import PeerScorer, ScorerConfig
+from zeromesh.network.peer_scorer import PeerScorer
 
 console = Console()
 OUTPUT_DIR = Path("benchmarks/results")

@@ -1,10 +1,11 @@
 import asyncio
+
 import pytest
 from app.network.protocol import (
     MessageType,
     create_message,
-    send_framed_message,
     read_framed_message,
+    send_framed_message,
     send_rpc_request,
 )
 from app.storage.local_store import LocalChunkStore

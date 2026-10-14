@@ -8,8 +8,9 @@ license = { text = "MIT" }
 requires-python = ">=3.12"
 
 dependencies = [
-    # Cryptography (AES-256-GCM, SHA-256)
+    # Cryptography (AES-256-GCM, SHA-256, Argon2id)
     "cryptography>=42.0",
+    "argon2-cffi>=23.1",
     # REST API
     "fastapi>=0.111",
     "python-multipart>=0.0.9",

@@ -1,6 +1,6 @@
 import hashlib
 import uuid
-from typing import List, Tuple
+
 from app.config import CHUNK_SIZE_BYTES
 from app.models.schemas import ChunkMetadata, FileMetadata
 
@@ -15,7 +15,7 @@ def chunk_file(
     filename: str,
     file_id: str = None,
     chunk_size: int = CHUNK_SIZE_BYTES,
-) -> Tuple[FileMetadata, List[Tuple[ChunkMetadata, bytes]]]:
+) -> tuple[FileMetadata, list[tuple[ChunkMetadata, bytes]]]:
     """
     Splits binary file data into chunks of `chunk_size` bytes.
     Returns FileMetadata and a list of (ChunkMetadata, chunk_bytes).
@@ -25,8 +25,8 @@ def chunk_file(
 
     file_hash = calculate_sha256(file_data)
     file_size = len(file_data)
-    chunks_with_data: List[Tuple[ChunkMetadata, bytes]] = []
-    chunk_metas: List[ChunkMetadata] = []
+    chunks_with_data: list[tuple[ChunkMetadata, bytes]] = []
+    chunk_metas: list[ChunkMetadata] = []
 
     seq = 0
     offset = 0
@@ -77,7 +77,7 @@ def chunk_file(
     return file_meta, chunks_with_data
 
 
-def reassemble_chunks(chunks_with_data: List[Tuple[ChunkMetadata, bytes]]) -> bytes:
+def reassemble_chunks(chunks_with_data: list[tuple[ChunkMetadata, bytes]]) -> bytes:
     """
     Sorts chunks by sequence_number, verifies sha256 of each chunk, and reassembles original file bytes.
     Raises ValueError on integrity hash mismatch.

@@ -1,9 +1,8 @@
 import asyncio
-import base64
 import json
 import struct
 import uuid
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 
 class MessageType:
@@ -23,9 +22,9 @@ def create_message(
     sender_id: str,
     sender_ip: str,
     sender_port: int,
-    payload: Optional[Dict[str, Any]] = None,
-    msg_id: Optional[str] = None,
-) -> Dict[str, Any]:
+    payload: dict[str, Any] | None = None,
+    msg_id: str | None = None,
+) -> dict[str, Any]:
     return {
         "msg_type": msg_type,
         "sender_id": sender_id,
@@ -37,7 +36,7 @@ def create_message(
 
 
 async def send_framed_message(
-    writer: asyncio.StreamWriter, message: Dict[str, Any]
+    writer: asyncio.StreamWriter, message: dict[str, Any]
 ) -> None:
     """Encodes JSON message and sends it over TCP with a 4-byte length header."""
     json_bytes = json.dumps(message).encode("utf-8")
@@ -48,26 +47,26 @@ async def send_framed_message(
 
 async def read_framed_message(
     reader: asyncio.StreamReader, timeout: float = 5.0
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Reads length-prefixed JSON message from TCP stream."""
     try:
         header = await asyncio.wait_for(reader.readexactly(4), timeout=timeout)
         length = struct.unpack("!I", header)[0]
         data = await asyncio.wait_for(reader.readexactly(length), timeout=timeout)
         return json.loads(data.decode("utf-8"))
-    except (asyncio.TimeoutError, asyncio.IncompleteReadError, ConnectionResetError):
+    except (TimeoutError, asyncio.IncompleteReadError, ConnectionResetError):
         return None
-    except Exception as e:
+    except Exception:
         return None
 
 
 async def send_rpc_request(
     ip: str,
     port: int,
-    message: Dict[str, Any],
+    message: dict[str, Any],
     timeout: float = 5.0,
     retries: int = 1,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Connects to target peer, sends RPC request, and returns response with retry logic."""
     for attempt in range(retries + 1):
         try:
