@@ -64,12 +64,14 @@ class FileManager:
         registry: ManifestRegistry,
         scorer: PeerScorer,
         chunk_size: int = 256 * 1024,
+        replication_manager: Any = None,
     ) -> None:
         self._local_id = local_id
         self._routing = routing
         self._store = store
         self._registry = registry
         self._scorer = scorer
+        self._replication_manager = replication_manager
         self._chunker = FileChunker(chunk_size=chunk_size)
 
     async def upload_file(
@@ -87,10 +89,10 @@ class FileManager:
         # 1. Chunk
         manifest, raw_chunks = self._chunker.chunk_file(path, filename=filename)
 
-        # 2. Encrypt + store locally in parallel
+        # 2. Encrypt + store locally in parallel (offload crypto to thread)
         enc_chunks: list[EncryptedChunk] = []
         for raw in raw_chunks:
-            enc = encrypt_chunk(raw, key)
+            enc = await asyncio.to_thread(encrypt_chunk, raw, key)
             await self._store.put(enc.content_id, enc.nonce, enc.ciphertext)
             enc_chunks.append(enc)
 
@@ -126,6 +128,8 @@ class FileManager:
                 ack = await conn.receive(timeout=5.0)
                 if ack.type == MessageType.STORE_ACK:
                     self._scorer.record_success(peer.node_id.hex, rtt_ms=None)
+                    if self._replication_manager is not None:
+                        self._replication_manager.track_replica(enc.content_id, peer.node_id.hex)
                 await conn.close()
             except Exception as exc:
                 logger.debug("Could not replicate chunk to %s: %r", peer, exc)
@@ -218,16 +222,25 @@ class FileManager:
                 continue
             try:
                 nonce, ciphertext = await self._get_chunk_from_peer(peer, content_id)
-                # Cache locally
-                await self._store.put(content_id, nonce, ciphertext)
-                self._scorer.record_success(peer_hex)
                 enc = EncryptedChunk(
                     nonce=nonce, ciphertext=ciphertext, content_id=content_id
                 )
-                return decrypt_chunk(enc, key)
-            except Exception as exc:
-                logger.debug("Peer %s failed for chunk %s: %r", peer, content_id[:8], exc)
-                self._scorer.record_failure(peer_hex)
+                # Verify and decrypt offloaded to worker thread (no event loop blocking)
+                plaintext = await asyncio.to_thread(decrypt_chunk, enc, key)
+
+                # Cache locally upon verified decryption
+                await self._store.put(content_id, nonce, ciphertext)
+                self._scorer.record_success(peer_hex)
+                return plaintext
+            except (ValueError, Exception) as exc:
+                # Check if it was an integrity or tampering failure
+                from cryptography.exceptions import InvalidTag
+                if isinstance(exc, (InvalidTag, ValueError)) and "mismatch" in str(exc).lower():
+                    logger.warning("INTEGRITY FAILURE: Peer %s sent corrupted chunk %s: %r", peer, content_id[:8], exc)
+                    self._scorer.record_integrity_failure(peer_hex)
+                else:
+                    logger.debug("Peer %s failed for chunk %s: %r", peer, content_id[:8], exc)
+                    self._scorer.record_failure(peer_hex)
 
         raise RuntimeError(f"Could not retrieve chunk {content_id[:16]}... from any peer")
 

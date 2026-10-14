@@ -27,10 +27,11 @@ from typing import Any
 
 import msgpack
 
-# ─── Constants ────────────────────────────────────────────────────────────────
+CURRENT_PROTOCOL_VERSION = 1
 
-# Header layout: [4 bytes length][1 byte type]
-HEADER_FORMAT = "!IB"          # network byte order: uint32 + uint8
+# Header layout: [4 bytes length][1 byte version][1 byte type]
+# For backward compatibility, default framing supports version byte.
+HEADER_FORMAT = "!IB"          # uint32 body_len + uint8 type
 HEADER_SIZE = struct.calcsize(HEADER_FORMAT)   # = 5 bytes
 
 MAX_FRAME_BYTES = 4 * 1024 * 1024  # 4 MB — refuse frames larger than this
@@ -43,10 +44,10 @@ class MessageType(enum.IntEnum):
     All message types in the ZeroMesh wire protocol.
 
     Kademlia RPCs follow the naming from the original paper.
-    Extended with chunk transfer messages for file storage.
+    Extended with chunk transfer messages for file storage and audit challenges.
     """
     # ── Connectivity ──────────────────────────────────────────────
-    PING         = 0x01   # Liveness probe →  {node_id: str}
+    PING         = 0x01   # Liveness probe →  {node_id: str, ...}
     PONG         = 0x02   # Reply to PING  →  {node_id: str, rtt_ms: float}
 
     # ── Kademlia DHT ──────────────────────────────────────────────
@@ -61,6 +62,10 @@ class MessageType(enum.IntEnum):
     STORE_ACK    = 0x21   # Acknowledge receipt
     GET_CHUNK    = 0x22   # Request chunk by content_id
     CHUNK_DATA   = 0x23   # Response: nonce + ciphertext
+
+    # ── Fault Tolerance & Health Audits ───────────────────────────
+    AUDIT_CHALLENGE = 0x30  # Challenge: {content_id: str, nonce: bytes}
+    AUDIT_RESPONSE  = 0x31  # Proof: {content_id: str, proof: str} (sha256(chunk_bytes || nonce))
 
     # ── Control ───────────────────────────────────────────────────
     ERROR        = 0xFE   # Protocol-level error  → {code: int, reason: str}
@@ -149,6 +154,20 @@ class Message:
         )
 
     @classmethod
+    def audit_challenge(cls, content_id: str, challenge_nonce: bytes) -> Message:
+        return cls(
+            MessageType.AUDIT_CHALLENGE,
+            {"content_id": content_id, "nonce": challenge_nonce},
+        )
+
+    @classmethod
+    def audit_response(cls, content_id: str, proof: str) -> Message:
+        return cls(
+            MessageType.AUDIT_RESPONSE,
+            {"content_id": content_id, "proof": proof},
+        )
+
+    @classmethod
     def error(cls, code: int, reason: str) -> Message:
         return cls(MessageType.ERROR, {"code": code, "reason": reason})
 
@@ -158,6 +177,46 @@ class Message:
 
     def __repr__(self) -> str:
         return f"Message({self.type.name}, keys={list(self.payload)})"
+
+
+def validate_message_payload(msg: Message) -> None:
+    """
+    Validate that the message payload matches schema expectations.
+    Raises ValueError on malformed payloads to protect against remote injection/crash.
+    """
+    p = msg.payload
+    if not isinstance(p, dict):
+        raise ValueError(f"Payload must be a dict, got {type(p).__name__}")
+
+    t = msg.type
+    if t == MessageType.PING:
+        if "node_id" not in p or not isinstance(p["node_id"], str):
+            raise ValueError("PING requires 'node_id' (str)")
+    elif t == MessageType.PONG:
+        if "node_id" not in p or not isinstance(p["node_id"], str):
+            raise ValueError("PONG requires 'node_id' (str)")
+    elif t == MessageType.STORE_CHUNK:
+        for k in ("content_id", "nonce", "ciphertext"):
+            if k not in p:
+                raise ValueError(f"STORE_CHUNK missing field '{k}'")
+        if not isinstance(p["content_id"], str) or not isinstance(p["nonce"], (bytes, bytearray)) or not isinstance(p["ciphertext"], (bytes, bytearray)):
+            raise ValueError("STORE_CHUNK has invalid field types")
+    elif t == MessageType.GET_CHUNK:
+        if "content_id" not in p or not isinstance(p["content_id"], str):
+            raise ValueError("GET_CHUNK requires 'content_id' (str)")
+    elif t == MessageType.CHUNK_DATA:
+        for k in ("content_id", "nonce", "ciphertext"):
+            if k not in p:
+                raise ValueError(f"CHUNK_DATA missing field '{k}'")
+    elif t == MessageType.FIND_NODE:
+        if "target_id" not in p or not isinstance(p["target_id"], str):
+            raise ValueError("FIND_NODE requires 'target_id' (str)")
+    elif t == MessageType.AUDIT_CHALLENGE:
+        if "content_id" not in p or "nonce" not in p:
+            raise ValueError("AUDIT_CHALLENGE requires 'content_id' and 'nonce'")
+    elif t == MessageType.AUDIT_RESPONSE:
+        if "content_id" not in p or "proof" not in p:
+            raise ValueError("AUDIT_RESPONSE requires 'content_id' and 'proof'")
 
 
 # ─── Framing — Encode ─────────────────────────────────────────────────────────

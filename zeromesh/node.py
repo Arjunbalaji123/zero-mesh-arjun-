@@ -65,12 +65,21 @@ class ZeroMeshNode:
         self.chunk_store = LocalChunkStore(self.data_dir)
         self.manifest_registry = ManifestRegistry(self.data_dir)
 
+        from zeromesh.storage.replication_manager import ReplicationManager
+        self.replication_manager = ReplicationManager(
+            local_id=self.local_id,
+            routing_table=self.routing_table,
+            chunk_store=self.chunk_store,
+            scorer=self.scorer,
+        )
+
         self.file_manager = FileManager(
             local_id=self.local_id,
             routing=self.routing_table,
             store=self.chunk_store,
             registry=self.manifest_registry,
             scorer=self.scorer,
+            replication_manager=self.replication_manager,
         )
 
         self.server = NodeServer(
@@ -177,6 +186,20 @@ class ZeroMeshNode:
                 nonce, ciphertext = stored
                 METRICS.chunks_retrieved_total.inc()
                 await conn.send(Message.chunk_data(content_id, nonce, ciphertext))
+            else:
+                await conn.send(Message.error(404, f"Chunk {content_id} not found"))
+            METRICS.messages_sent_total.inc()
+
+        elif msg.type == MessageType.AUDIT_CHALLENGE:
+            content_id = msg.payload["content_id"]
+            challenge_nonce = msg.payload["nonce"]
+            stored = await self.chunk_store.get(content_id)
+            if stored is not None:
+                nonce, ciphertext = stored
+                # Proof = sha256(nonce || ciphertext || challenge_nonce)
+                from zeromesh.crypto.engine import sha256_hash
+                proof = sha256_hash(nonce + ciphertext + challenge_nonce)
+                await conn.send(Message.audit_response(content_id, proof))
             else:
                 await conn.send(Message.error(404, f"Chunk {content_id} not found"))
             METRICS.messages_sent_total.inc()
@@ -340,9 +363,13 @@ class ZeroMeshNode:
         await self.chunk_store.open()
         await self.manifest_registry.open()
         await self.server.start()
+        self.port = self.server.port
+        if not self.advertise_port:
+            self.advertise_port = self.port
 
         self._is_running = True
         self._refresh_task = asyncio.create_task(self._periodic_refresh())
+        await self.replication_manager.start()
         logger.info("ZeroMesh node running on %s:%d", self.host, self.port)
 
     async def stop(self) -> None:
@@ -352,6 +379,8 @@ class ZeroMeshNode:
 
         logger.info("Stopping ZeroMesh node %s ...", self.local_id.hex[:12])
         self._is_running = False
+
+        await self.replication_manager.stop()
 
         if self._refresh_task and not self._refresh_task.done():
             self._refresh_task.cancel()

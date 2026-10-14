@@ -78,6 +78,10 @@ class NodeServer:
             backlog=self.backlog,
             reuse_address=True,
         )
+        if self._server.sockets:
+            sock_name = self._server.sockets[0].getsockname()
+            if isinstance(sock_name, tuple) and len(sock_name) >= 2:
+                self.port = sock_name[1]
         logger.info("NodeServer listening on %s:%d", self.host, self.port)
 
     async def stop(self) -> None:
@@ -88,12 +92,14 @@ class NodeServer:
             return
 
         self._server.close()
-        await self._server.wait_closed()
-        logger.info("NodeServer on :%d stopped", self.port)
-
+        for task in list(self._tasks):
+            task.cancel()
         if self._tasks:
             await asyncio.gather(*self._tasks, return_exceptions=True)
         self._tasks.clear()
+        await self._server.wait_closed()
+        self._server = None
+        logger.info("NodeServer on :%d stopped", self.port)
 
     # ── Internal ──────────────────────────────────────────────────
 

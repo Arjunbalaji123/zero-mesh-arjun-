@@ -25,7 +25,7 @@ from zeromesh.node import ZeroMeshNode
 
 @pytest.fixture
 async def running_node(tmp_path: Path):
-    node = ZeroMeshNode(host="127.0.0.1", port=7520, data_dir=tmp_path / "node_api")
+    node = ZeroMeshNode(host="127.0.0.1", port=0, data_dir=tmp_path / "node_api")
     await node.start()
     try:
         yield node
@@ -47,7 +47,7 @@ class TestZeroMeshAPI:
             data = resp.json()
             assert data["status"] == "ok"
             assert "node_id" in data
-            assert data["port"] == 7520
+            assert data["port"] > 0
             assert data["stored_chunks"] == 0
 
     async def test_upload_and_download_file(self, app):

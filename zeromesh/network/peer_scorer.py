@@ -32,12 +32,23 @@ DECAY_HALF_LIFE  = 3600.0  # Seconds: recency score halves every hour
 # ─── Peer Stats ───────────────────────────────────────────────────────────────
 
 @dataclass
+class ScorerConfig:
+    """Configurable weights and thresholds for peer trust scoring."""
+    weight_rtt: float = 0.30
+    weight_success: float = 0.30
+    weight_recency: float = 0.15
+    weight_streak: float = 0.10
+    weight_integrity: float = 0.15
+    integrity_penalty: float = 0.50
+    blacklist_threshold_failures: int = 2
+    blacklist_duration_seconds: float = 300.0   # 5 minutes
+    cold_start_prior: float = 0.50
+
+
+@dataclass
 class PeerStats:
     """
     Mutable runtime statistics for a single peer.
-
-    All timestamps are Unix epoch floats (time.monotonic is NOT used here
-    because we want wall-clock recency for decay calculations).
     """
     node_id: str
 
@@ -46,6 +57,7 @@ class PeerStats:
     successful:       int   = 0
     failed:           int   = 0
     consecutive_failures: int = 0
+    integrity_failures:   int = 0
 
     # RTT tracking (Exponentially Weighted Moving Average)
     rtt_ewma_ms:  float = 0.0
@@ -54,6 +66,7 @@ class PeerStats:
     # Timestamps
     first_seen:   float = field(default_factory=time.time)
     last_seen:    float = field(default_factory=time.time)
+    blacklisted_until: float = 0.0
 
     # Chunk transfer counters
     chunks_stored:    int = 0
@@ -75,11 +88,19 @@ class PeerStats:
         self.failed += 1
         self.consecutive_failures += 1
 
+    def record_integrity_failure(self, blacklist_duration: float = 300.0) -> None:
+        """Record corrupt/tampered chunk delivery with immediate penalty."""
+        self.total_requests += 1
+        self.failed += 1
+        self.consecutive_failures += 3
+        self.integrity_failures += 1
+        self.blacklisted_until = time.time() + blacklist_duration
+
+    def is_blacklisted(self) -> bool:
+        """Returns True if the peer is currently blacklisted."""
+        return time.time() < self.blacklisted_until
+
     def _update_rtt(self, sample_ms: float) -> None:
-        """
-        EWMA update: alpha decreases as we collect more samples
-        (similar to TCP's smoothed RTT estimator).
-        """
         self.rtt_samples += 1
         alpha = 1.0 / min(self.rtt_samples, MAX_RTT_SAMPLES)
         if self.rtt_ewma_ms == 0.0:
@@ -102,18 +123,15 @@ class PeerScorer:
     Computes a composite reliability score for each known peer.
 
     Score components (each 0.0–1.0, linearly weighted):
-
-        score = 0.40 * rtt_score
-              + 0.35 * success_score
-              + 0.15 * recency_score
-              + 0.10 * streak_score
-
-    The streak score heavily penalises peers with consecutive failures,
-    making unreliable peers drop off quickly even if their historical
-    success rate is still decent.
+        score = w_rtt * rtt_score
+              + w_success * success_score
+              + w_recency * recency_score
+              + w_streak * streak_score
+              + w_integrity * integrity_score
     """
 
-    def __init__(self) -> None:
+    def __init__(self, config: ScorerConfig | None = None) -> None:
+        self.config = config or ScorerConfig()
         self._stats: dict[str, PeerStats] = {}
 
     # ── Stats access ──────────────────────────────────────────────
@@ -132,32 +150,49 @@ class PeerScorer:
     def record_failure(self, node_id: str) -> None:
         self.get_or_create(node_id).record_failure()
 
+    def record_integrity_failure(self, node_id: str) -> None:
+        """Immediate severe penalty and blacklisting on chunk hash mismatch."""
+        self.get_or_create(node_id).record_integrity_failure(
+            blacklist_duration=self.config.blacklist_duration_seconds
+        )
+
+    def is_blacklisted(self, node_id: str) -> bool:
+        stats = self._stats.get(node_id)
+        return stats.is_blacklisted() if stats else False
+
     # ── Score computation ─────────────────────────────────────────
 
     def score(self, node_id: str) -> float:
         """
         Return composite reliability score for ``node_id``.
-
-        Returns 0.5 (neutral) for unknown peers with no history.
+        Returns cold_start_prior for unknown peers with no history.
+        Blacklisted peers receive score 0.0.
         """
         stats = self._stats.get(node_id)
         if stats is None:
-            return 0.5
+            return self.config.cold_start_prior
 
+        if stats.is_blacklisted():
+            return 0.0
+
+        cfg = self.config
         rtt_score     = self._rtt_score(stats)
         success_score = stats.success_rate
         recency_score = self._recency_score(stats)
         streak_score  = self._streak_score(stats)
+        integrity_score = max(0.0, 1.0 - (stats.integrity_failures * cfg.integrity_penalty))
 
-        return (
-            0.40 * rtt_score
-            + 0.35 * success_score
-            + 0.15 * recency_score
-            + 0.10 * streak_score
+        raw_score = (
+            cfg.weight_rtt * rtt_score
+            + cfg.weight_success * success_score
+            + cfg.weight_recency * recency_score
+            + cfg.weight_streak * streak_score
+            + cfg.weight_integrity * integrity_score
         )
+        return max(0.0, min(1.0, raw_score))
 
     def rank_peers(self, node_ids: list[str]) -> list[str]:
-        """Return ``node_ids`` sorted by score descending (best first)."""
+        """Return ``node_ids`` sorted by score descending (best first), excluding blacklisted."""
         return sorted(node_ids, key=self.score, reverse=True)
 
     def evict_candidate(self, node_ids: list[str]) -> str | None:
@@ -178,24 +213,15 @@ class PeerScorer:
             return 1.0
         if rtt >= RTT_WORST_MS:
             return 0.0
-        # Logarithmic decay between ideal and worst
         log_pos = math.log(rtt / RTT_IDEAL_MS) / math.log(RTT_WORST_MS / RTT_IDEAL_MS)
         return max(0.0, 1.0 - log_pos)
 
     @staticmethod
     def _recency_score(stats: PeerStats) -> float:
-        """
-        Exponential decay: score = 0.5^(age / DECAY_HALF_LIFE).
-        A peer last seen 1 hour ago scores 0.5; 2 hours ago → 0.25.
-        """
         age_seconds = time.time() - stats.last_seen
         return float(0.5 ** (age_seconds / DECAY_HALF_LIFE))
 
     @staticmethod
     def _streak_score(stats: PeerStats) -> float:
-        """
-        Penalise consecutive failures exponentially.
-        0 failures → 1.0; 5 failures → ~0.03; 10+ → ~0.001.
-        """
         k = stats.consecutive_failures
         return math.exp(-0.5 * k)

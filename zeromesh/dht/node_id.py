@@ -102,6 +102,16 @@ class NodeID:
         return cls.from_hex(content_id_hex)
 
     @classmethod
+    def from_public_key(cls, pubkey_bytes: bytes) -> NodeID:
+        """
+        Cryptographic node identity derived from an Ed25519 public key.
+        node_id = SHA-256(public_key)
+        Defends against Sybil identity spoofing because only the private key
+        holder can sign protocol messages.
+        """
+        return cls(hashlib.sha256(pubkey_bytes).digest())
+
+    @classmethod
     def random(cls) -> NodeID:
         """Generate a random 256-bit ID (useful for testing / bootstrap)."""
         return cls(secrets.token_bytes(ID_BYTES))

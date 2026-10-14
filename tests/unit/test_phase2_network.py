@@ -293,21 +293,17 @@ class TestPingPong:
             await PeerConnection.connect(PeerAddress("127.0.0.1", 1), timeout=0.5)
 
     async def test_closed_connection_send_raises(self):
-        port = find_free_port()
-
-        async def noop(conn: PeerConnection) -> None:
-            await conn.close()
-
-        server = NodeServer("127.0.0.1", port, noop)
-        await server.start()
-
+        server = await asyncio.start_server(lambda r, w: None, "127.0.0.1", 0)
+        port = server.sockets[0].getsockname()[1]
         try:
             conn = await PeerConnection.connect(PeerAddress("127.0.0.1", port))
-            conn.is_closed = True
+            await conn.close()
+            assert conn.is_closed
             with pytest.raises(ConnectionError):
                 await conn.send(Message.ping("n"))
         finally:
-            await server.stop()
+            server.close()
+            await server.wait_closed()
 
 
 # ══════════════════════════════════════════════════════════════════════════════

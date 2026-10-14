@@ -24,6 +24,7 @@ from zeromesh.network.protocol import (
     decode_body,
     decode_header,
     encode_message,
+    validate_message_payload,
 )
 
 # ─── Peer Identity ────────────────────────────────────────────────────────────
@@ -176,7 +177,9 @@ class PeerConnection:
                 timeout=timeout,
             )
 
-        return decode_body(payload_bytes, msg_type_int)
+        msg = decode_body(payload_bytes, msg_type_int)
+        validate_message_payload(msg)
+        return msg
 
     async def _read_exactly(self, n: int) -> bytes:
         """
@@ -231,13 +234,17 @@ class PeerConnection:
             return
         self.is_closed = True
         try:
-            await self.send(Message.goodbye())
+            if not self._writer.is_closing():
+                frame = encode_message(Message.goodbye())
+                async with self._send_lock:
+                    self._writer.write(frame)
+                    await asyncio.wait_for(self._writer.drain(), timeout=1.0)
         except Exception:
             pass  # peer may already be gone
         finally:
-            self._writer.close()
             try:
-                await self._writer.wait_closed()
+                self._writer.close()
+                await asyncio.wait_for(self._writer.wait_closed(), timeout=1.0)
             except Exception:
                 pass
 
